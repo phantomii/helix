@@ -1,0 +1,10 @@
+include README.rst
+include LICENSE
+
+exclude .gitignore
+
+recursive-include etc *
+recursive-include helix *.glade
+
+global-exclude *.pyc
+global-exclude *~
