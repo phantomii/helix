@@ -17,7 +17,7 @@ import logging
 import logging.config
 import yaml
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 
 DEFAULT_CONFIG = {
