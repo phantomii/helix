@@ -104,7 +104,8 @@ class Instrument(Controller):
 
     def filter(self, parent_resource, **kwargs):
         ctx = self.get_context()
-        query = ctx.session.query(self.model)
+        query = ctx.session.query(self.model).filter(
+            self.model.broker == parent_resource)
         query = self._add_filter_to_query(query, self.model, kwargs)
         instruments = query.all()
         return instruments
