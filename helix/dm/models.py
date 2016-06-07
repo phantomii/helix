@@ -37,9 +37,6 @@ class Broker(Base):
         super(Broker, self).__init__()
         self.name = name
 
-    def get_id(self):
-        return self.uuid
-
 
 class Instrument(Base):
     __tablename__ = 'instruments'
@@ -63,9 +60,6 @@ class Instrument(Base):
         self.ticker_symbol = ticker_symbol
         self.name = name
         self.digits = digits
-
-    def get_id(self):
-        return self.uuid
 
 
 class Tick(Base):
@@ -91,6 +85,3 @@ class Tick(Base):
         self.bid = bid
         self.ask_volume = ask_volume
         self.bid_volume = bid_volume
-
-    def get_id(self):
-        return self.uuid
