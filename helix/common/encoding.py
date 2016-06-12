@@ -16,7 +16,7 @@
 
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 encoding_opts = [
     cfg.StrOpt('system-encoding', default='utf-8',
