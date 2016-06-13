@@ -19,8 +19,9 @@
 from oslo_config import cfg
 from tavrida import client
 from tavrida import config
-from tavrida import discovery
 from tavrida import entry_point
+
+from helix.rpc import discovery
 
 
 connection_group = cfg.OptGroup(
@@ -60,9 +61,6 @@ connection_opts = [
 helix_api_opts = [
     cfg.StrOpt("service_name", default="api",
                help="Service name in AMQP messages"),
-    cfg.StrOpt("notification_exchange", default="api_notifications",
-               help=("An exchange for notifications from API to "
-                     "another services"))
 ]
 
 
@@ -84,9 +82,7 @@ def factory_amqp_client(event_name):
     source = entry_point.Source(service_name=CONF.api.service_name,
                                 method_name=event_name)
 
-    disc = discovery.LocalDiscovery()
-    disc.register_local_publisher(service_name=CONF.api.service_name,
-                                  exchange_name=CONF.api.notification_exchange)
+    disc = discovery.get_discovery(service_name=CONF.api.service_name)
 
     conn_conf = config.ConnectionConfig(
         host=CONF.amqp.host,
