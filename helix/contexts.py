@@ -16,6 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 from restalchemy.common import context
 
 from helix.common import db
@@ -26,10 +28,17 @@ class Context(context.Context):
     _Session = None
     _session = None
 
+    def __init__(self, correlation_id=None):
+        self._correlation_id = correlation_id or uuid.uuid4()
+
     def get_session(self):
         if self._Session is None:
             self._Session = db.get_session()
         return self._Session()
+
+    @property
+    def correlation_id(self):
+        return str(self._correlation_id)
 
     @property
     def session(self):

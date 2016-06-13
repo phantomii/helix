@@ -30,7 +30,8 @@ from helix import security
 class HelixContextMiddleware(middlewares.ContextMiddleware):
 
     def process_request(self, req):
-        ctx = contexts.Context()
+        correlation_id = req.headers.get('correlation_id', None)
+        ctx = contexts.Context(correlation_id=correlation_id)
         req.context = ctx
         result = req.get_response(self.application)
         ctx.release()
@@ -46,8 +47,13 @@ class LoggingMiddleware(middlewares.Middleware):
 
     def process_request(self, req):
         req_chunk = self._request_chunk(req)
+        correlation_id = None
+        ctx = getattr(req, 'context', None)
+        if ctx:
+            correlation_id = ctx.correlation_id
         headers = security.make_secure_headers(dict(req.headers))
-        self.logger.info('API > %s %s %s',
+        self.logger.info('API (%s) > %s %s %s',
+                         correlation_id,
                          req_chunk,
                          self._headers_chunk(headers),
                          req.body)
@@ -58,7 +64,8 @@ class LoggingMiddleware(middlewares.Middleware):
             # unreachable if
             # :py:method:`middlewares.ContextMiddleware#process_request`
             # returns response.
-            self.logger.info('API < %s %s %s %s',
+            self.logger.info('API (%s) < %s %s %s %s',
+                             correlation_id,
                              res.status_code,
                              self._request_chunk(req),
                              self._headers_chunk(res.headers),
@@ -67,7 +74,8 @@ class LoggingMiddleware(middlewares.Middleware):
         except Exception:
             e_type, e_value, e_tb = sys.exc_info()
             e_file, e_lineno, e_fn, e_line = traceback.extract_tb(e_tb)[-1]
-            self.logger.error('API Error %s %s %s %s:%s:%s> %s',
+            self.logger.error('API Error (%s) %s %s %s %s:%s:%s> %s',
+                              correlation_id,
                               req_chunk,
                               e_type,
                               e_value,

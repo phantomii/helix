@@ -47,5 +47,5 @@ def get_helix_application():
 def build_wsgi_application():
     return attach_middlewares(
         applications.Application(get_helix_application()),
-        [middlewares.HelixContextMiddleware,
-         middlewares.LoggingMiddleware])
+        [middlewares.LoggingMiddleware,
+         middlewares.HelixContextMiddleware])
