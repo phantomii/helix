@@ -5,6 +5,7 @@ pyyaml==3.11
 sqlalchemy==1.0.12
 numpy
 -e git+https://github.com/phantomii/restalchemy.git@api-resources#egg=restalchemy
+-e git+https://github.com/phantomii/tavrida.git@feature-config-file#egg=tavrida
 wsgiref==0.1.2
 alembic==0.8.6
 MySQL-python==1.2.5

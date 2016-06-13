@@ -21,6 +21,7 @@ import uuid
 from restalchemy.common import context
 
 from helix.common import db
+from helix.rpc import client
 
 
 class Context(context.Context):
@@ -53,3 +54,7 @@ class Context(context.Context):
         if self._Session:
             self._Session.close_all()
             self._Session = None
+
+    def fire_event(self, event_name, **kwargs):
+        cli = client.get_client_by_event(event_name)
+        cli.publish(correlation_id=self.correlation_id, **kwargs)
