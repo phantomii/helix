@@ -73,8 +73,9 @@ class Position(object):
 
 class PositionManager(object):
 
-    def __init__(self, instruments):
+    def __init__(self, event_bus, instruments):
         super(PositionManager, self).__init__()
+        self._event_bus = event_bus
         self._positions = {i.name: Position(i) for i in instruments}
 
     def on_tick(self, tick):

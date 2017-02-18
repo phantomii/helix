@@ -25,8 +25,8 @@ from helix.streams import csvs
 
 class EURUSD(instruments.EURUSD):
 
-    def __init__(self, file_path, default_volume=100):
-        super(EURUSD, self).__init__()
+    def __init__(self, event_bus, file_path, default_volume=100):
+        super(EURUSD, self).__init__(event_bus=event_bus)
         self._stream_reader = csvs.TickStreamReader(file_path=file_path)
         self._tick_generator = self._stream_reader.stream()
         self._last_time_stamp = 0
@@ -62,10 +62,10 @@ class EURUSD(instruments.EURUSD):
 
         return self.get_last_tick()
 
-    def on_loop(self, engine):
+    def on_loop(self):
         try:
             tick = self._load_next_tick()
-            engine.fire(events.OnTickEvent(tick=tick))
+            self._event_bus.fire(events.OnTickEvent(tick=tick))
         except StopIteration:
             self._stream_reader.close()
-            engine.fire(base.OnStopEngine())
+            self._event_bus.fire(base.OnStopEngine())

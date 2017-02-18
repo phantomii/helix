@@ -25,6 +25,7 @@ from helix.common import config
 from helix.common import log as helix_logging
 from helix.dm.backtest import instruments
 from helix import engines
+from helix.events import bus
 from helix.strategies import helix_v1
 
 
@@ -36,13 +37,17 @@ def main():
     helix_logging.configure()
     log = logging.getLogger(__name__)
 
+    event_bus = bus.Eventbus()
+
     eurusd = instruments.EURUSD(
-        file_path="data/EURUSD_UTC_Ticks_Bid_2013.01.01_2017.01.01.csv")
+        file_path="data/EURUSD_UTC_Ticks_Bid_2013.01.01_2017.01.01.csv",
+        event_bus=event_bus)
 
     instruments_list = engines.GroupOfHistoricalInstruments(
         instruments=[eurusd])
 
-    engine = engines.EventEngine(instruments=instruments_list)
+    engine = engines.EventEngine(event_bus=event_bus,
+                                 instruments=instruments_list)
 
     account = accounts.Account(engine, 1000, leverage=100)
     helix_v1.HelixStrategy(account=account)

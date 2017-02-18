@@ -34,17 +34,21 @@ class Strategy(object):
         self._log = logging.getLogger(__name__)
         self._account = account
         self._engine = account.get_engine()
-        self._engine.subscribe(engines.OnStartEngine, self._on_start_handler)
-        self._engine.subscribe(engines.OnStopEngine, self._on_stop_handler)
-        self._engine.subscribe(events.OnTickEvent, self._on_tick_handler)
+        self._event_bus = self._engine.get_event_bus()
+        self._event_bus.subscribe(engines.OnStartEngine,
+                                  self._on_start_handler)
+        self._event_bus.subscribe(engines.OnStopEngine,
+                                  self._on_stop_handler)
+        self._event_bus.subscribe(events.OnTickEvent,
+                                  self._on_tick_handler)
 
-    def _on_start_handler(self, engine, event):
+    def _on_start_handler(self, event):
         self.on_start()
 
-    def _on_stop_handler(self, engine, event):
+    def _on_stop_handler(self, event):
         self.on_stop()
 
-    def _on_tick_handler(self, engine, event):
+    def _on_tick_handler(self, event):
         self.on_tick(tick=event.get_tick())
 
     @abc.abstractmethod

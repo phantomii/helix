@@ -20,31 +20,18 @@ import copy
 
 import sortedcontainers
 
+from helix.market import events
+
 
 class NoQuotas(Exception):
     pass
 
 
-class ProcessedPositions(object):
-
-    def __init__(self, submitted_positions, filled_positions):
-        super(ProcessedPositions, self).__init__()
-        self._submitted_positions = submitted_positions
-        self._filled_positions = filled_positions
-
-    @property
-    def submitted_positions(self):
-        return self._submitted_positions
-
-    @property
-    def filled_positions(self):
-        return self._filled_positions
-
-
 class OrderBook(object):
 
-    def __init__(self):
+    def __init__(self, event_bus):
         super(OrderBook, self).__init__()
+        self._event_bus = event_bus
         self._ask_positions = sortedcontainers.SortedDict()
         self._bid_positions = sortedcontainers.SortedDict()
 
@@ -65,8 +52,6 @@ class OrderBook(object):
             return default
 
     def add(self, positions):
-        submitted_positions = []
-        filled_positions = []
         for position in positions:
             if position.amount < 0:
                 bid_price = self.get_bid(default=0)
@@ -75,13 +60,16 @@ class OrderBook(object):
                         self._ask_positions[position.price].append(position)
                     except KeyError:
                         self._ask_positions[position.price] = [position]
-                    submitted_positions.append(position)
+                    self._event_bus.fire(events.OnOrderPositionSubmitted(
+                        order_position=position))
                 else:
                     bid_position = self._bid_positions[bid_price].pop(0)
                     position.set_contragent(bid_position, price=bid_price)
                     bid_position.set_contragent(position, price=bid_price)
-                    filled_positions.append(bid_position)
-                    filled_positions.append(position)
+                    self._event_bus.fire(events.OnOrderPositionFilled(
+                        order_position=bid_position))
+                    self._event_bus.fire(events.OnOrderPositionFilled(
+                        order_position=position))
                     if len(self._bid_positions[bid_price]) == 0:
                         del self._bid_positions[bid_price]
             else:
@@ -91,17 +79,18 @@ class OrderBook(object):
                         self._bid_positions[position.price].append(position)
                     except KeyError:
                         self._bid_positions[position.price] = [position]
-                    submitted_positions.append(position)
+                    self._event_bus.fire(events.OnOrderPositionSubmitted(
+                        order_position=position))
                 else:
                     ask_position = self._ask_positions[ask_price].pop(0)
                     position.set_contragent(ask_position, price=ask_price)
                     ask_position.set_contragent(position, price=ask_price)
-                    filled_positions.append(ask_position)
-                    filled_positions.append(position)
+                    self._event_bus.fire(events.OnOrderPositionFilled(
+                        order_position=ask_position))
+                    self._event_bus.fire(events.OnOrderPositionFilled(
+                        order_position=position))
                     if len(self._ask_positions[ask_price]) == 0:
                         del self._ask_positions[ask_price]
-        return ProcessedPositions(submitted_positions=submitted_positions,
-                                  filled_positions=filled_positions)
 
     def remove(self, positions):
         result = []

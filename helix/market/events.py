@@ -20,20 +20,20 @@
 from helix.events import base
 
 
-class _BaseOnOrderPositions(base.Event):
+class _BaseOnOrderPosition(base.Event):
 
-    def __init__(self, order_positions):
-        super(_BaseOnOrderPositions, self).__init__()
-        self._order_positions = order_positions
+    def __init__(self, order_position):
+        super(_BaseOnOrderPosition, self).__init__()
+        self._order_position = order_position
 
     @property
-    def order_positions(self):
-        return self._order_positions
+    def order_position(self):
+        return self._order_position
 
 
-class OnOrderPositionsSubmitted(_BaseOnOrderPositions):
+class OnOrderPositionSubmitted(_BaseOnOrderPosition):
     pass
 
 
-class OnOrderPositionsFilled(_BaseOnOrderPositions):
+class OnOrderPositionFilled(_BaseOnOrderPosition):
     pass

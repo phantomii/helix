@@ -22,5 +22,5 @@ from helix.dm import models
 
 class EURUSD(models.Instrument):
 
-    def __init__(self):
-        super(EURUSD, self).__init__(name="EUR/USD")
+    def __init__(self, event_bus):
+        super(EURUSD, self).__init__(name="EUR/USD", event_bus=event_bus)

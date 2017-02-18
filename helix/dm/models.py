@@ -27,9 +27,10 @@ from helix.market import order_books
 @six.add_metaclass(abc.ABCMeta)
 class Instrument(object):
 
-    def __init__(self, name):
+    def __init__(self, event_bus, name):
         self._name = name
-        self._order_book = order_books.OrderBook()
+        self._event_bus = event_bus
+        self._order_book = order_books.OrderBook(event_bus=event_bus)
 
     @property
     def name(self):

@@ -20,6 +20,7 @@
 import copy
 import unittest
 
+from helix.events import bus
 from helix.market import order_books
 from helix.market import orders
 
@@ -27,7 +28,8 @@ from helix.market import orders
 class OrderBookTestCase(unittest.TestCase):
 
     def setUp(self):
-        self._order_book = order_books.OrderBook()
+        self._event_bus = bus.Eventbus()
+        self._order_book = order_books.OrderBook(event_bus=self._event_bus)
 
     def tearDown(self):
         del self._order_book

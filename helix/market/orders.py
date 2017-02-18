@@ -93,22 +93,22 @@ class AbstractOrder(object):
         self._canceled_order_positions = []
         self._rejected_reason = None
 
-        engine = self._account.get_engine()
-        engine.subscribe(events.OnOrderPositionsSubmitted,
-                         self._on_order_position_handler)
-        engine.subscribe(events.OnOrderPositionsFilled,
-                         self._on_order_position_handler)
+        event_bus = self._account.get_engine().get_event_bus()
+        event_bus.subscribe(events.OnOrderPositionSubmitted,
+                            self._on_order_position_handler)
+        event_bus.subscribe(events.OnOrderPositionFilled,
+                            self._on_order_position_handler)
 
         order_positions = self._gen_order_positions()
 
         self._account.submit_order_positions(instrument=self._instrument,
                                              positions=order_positions)
 
-    def _on_order_position_handler(self, engine, event):
-        for position in event.order_positions:
-            if position.order == self:
-                if position not in self._submited_order_positions:
-                    self._submited_order_positions.append(position)
+    def _on_order_position_handler(self, event):
+        order_position = event.order_position
+        if order_position.order == self:
+            if order_position not in self._submited_order_positions:
+                self._submited_order_positions.append(order_position)
 
     @property
     def instrument(self):

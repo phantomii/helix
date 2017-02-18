@@ -18,7 +18,6 @@
 
 import abc
 import logging
-import Queue
 import threading
 import time
 
@@ -51,7 +50,7 @@ class AbstractGroupOfInstruments(object):
         return time.time()
 
     @abc.abstractmethod
-    def on_loop(self, engine):
+    def on_loop(self):
         raise NotImplementedError()
 
     def __iter__(self):
@@ -72,9 +71,9 @@ class GroupOfHistoricalInstruments(AbstractGroupOfInstruments):
         target_instrument = self._select_instrument()
         return target_instrument.get_next_tick_info().timestamp
 
-    def on_loop(self, engine):
+    def on_loop(self):
         target_instrument = self._select_instrument()
-        target_instrument.on_loop(engine)
+        target_instrument.on_loop()
 
 
 class EventEngine(threading.Thread):
@@ -82,42 +81,21 @@ class EventEngine(threading.Thread):
 
         parameters:
 
+        :param event_bus: - Instance of helix.events.Eventbus class
         :param instruments: - Instance of AbstractGroupOfInstruments child
         """
 
-    def __init__(self, instruments):
+    def __init__(self, event_bus, instruments):
         super(EventEngine, self).__init__()
-        self._event_queue = Queue.Queue()
+        self._event_bus = event_bus
         self._market_timestamp = 0
         self._instruments = instruments
         self._set_market_timestamp(instruments.get_current_timestamp())
         self._idle_timeout = 10
-        self._subscribers = {}
-        self._subscribers_lock = threading.RLock()
-        self.subscribe(OnStopEngine, self._stop_event_handler)
-        self.subscribe(events.OnTickEvent, self._set_market_timestamp_handler)
+        self._event_bus.subscribe(OnStopEngine, self._stop_event_handler)
+        self._event_bus.subscribe(events.OnTickEvent,
+                                  self._set_market_timestamp_handler)
         self._stop = False
-
-    def subscribe(self, event_type, callback):
-        self._subscribers_lock.acquire()
-        try:
-            callback_list = self._subscribers.get(event_type, [])
-            callback_list.append(callback)
-            self._subscribers[event_type] = callback_list
-        finally:
-            self._subscribers_lock.release()
-
-    def unsubscribe(self, event_type, callback):
-        self._subscribers_lock.acquire()
-        try:
-            callback_list = self._subscribers.get(event_type, [])
-            if callback in callback_list:
-                callback_list.remove(callback)
-            self._subscribers[event_type] = callback_list
-            if len(callback_list) == 0:
-                del self._subscribers[event_type]
-        finally:
-            self._subscribers_lock.release()
 
     def get_ide_timeout(self):
         return self._idle_timeout
@@ -132,7 +110,7 @@ class EventEngine(threading.Thread):
         if self._market_timestamp < timestamp:
             self._market_timestamp = timestamp
 
-    def _set_market_timestamp_handler(self, engine, event):
+    def _set_market_timestamp_handler(self, event):
         self._set_market_timestamp(event.get_tick().timestamp)
 
     def get_instruments(self):
@@ -144,33 +122,24 @@ class EventEngine(threading.Thread):
                 return instrument
         raise ValueError("Instrument %s not found" % name)
 
-    def fire(self, event):
-        if event:
-            self._event_queue.put(event)
+    def get_event_bus(self):
+        return self._event_bus
 
     def run(self):
-        self._event_queue.put(OnStartEngine())
+        self._event_bus.fire(OnStartEngine())
         while not self._stop:
             # get new tick events
-            self._instruments.on_loop(self)
+            self._instruments.on_loop()
 
-            if self._event_queue.empty():
+            if self._event_bus.is_empty():
                 time.sleep(self._idle_timeout)
 
-            # process events
-            while True:
-                try:
-                    event = self._event_queue.get_nowait()
-                    for callback in self._subscribers.get(type(event), []):
-                        callback(engine=self, event=event)
-                except Queue.Empty:
-                    break
-                except Exception:
-                    LOG.exception("Opsss!!! Can't process event %s", event)
+            self._event_bus.process_events()
+
         LOG.info("Engine stopped")
 
-    def _stop_event_handler(self, engine, event):
+    def _stop_event_handler(self, event):
         self._stop = True
 
     def stop(self):
-        self.fire(OnStopEngine())
+        self._event_bus.fire(OnStopEngine())
