@@ -16,13 +16,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import abc
 import logging
 import Queue
 import threading
 import time
 
+import six
 
-from helix import accounts
+
 from helix.dm import events
 from helix.events import base
 
@@ -38,18 +40,60 @@ class OnStopEngine(base.Event):
 LOG = logging.getLogger(__name__)
 
 
+@six.add_metaclass(abc.ABCMeta)
+class AbstractGroupOfInstruments(object):
+
+    def __init__(self, instruments):
+        super(AbstractGroupOfInstruments, self).__init__()
+        self._instruments = instruments
+
+    def get_current_timestamp(self):
+        return time.time()
+
+    @abc.abstractmethod
+    def on_loop(self, engine):
+        raise NotImplementedError()
+
+    def __iter__(self):
+        return iter(self._instruments)
+
+
+class GroupOfHistoricalInstruments(AbstractGroupOfInstruments):
+
+    def _select_instrument(self):
+        target_instrument = None
+        next_tick_time = float("inf")
+        for instrument in self._instruments:
+            if instrument.get_next_tick_info().timestamp < next_tick_time:
+                target_instrument = instrument
+        return target_instrument
+
+    def get_current_timestamp(self):
+        target_instrument = self._select_instrument()
+        return target_instrument.get_next_tick_info().timestamp
+
+    def on_loop(self, engine):
+        target_instrument = self._select_instrument()
+        target_instrument.on_loop(engine)
+
+
 class EventEngine(threading.Thread):
+    """Event engine
+
+        parameters:
+
+        :param instruments: - Instance of AbstractGroupOfInstruments child
+        """
 
     def __init__(self, instruments):
         super(EventEngine, self).__init__()
         self._event_queue = Queue.Queue()
+        self._market_timestamp = 0
         self._instruments = instruments
+        self._set_market_timestamp(instruments.get_current_timestamp())
         self._idle_timeout = 10
         self._subscribers = {}
         self._subscribers_lock = threading.RLock()
-        self._market_timestamp = 0
-        for instrument in instruments:
-            self._set_market_timestamp(instrument.get_instrument_timestamp())
         self.subscribe(OnStopEngine, self._stop_event_handler)
         self.subscribe(events.OnTickEvent, self._set_market_timestamp_handler)
         self._stop = False
@@ -108,8 +152,7 @@ class EventEngine(threading.Thread):
         self._event_queue.put(OnStartEngine())
         while not self._stop:
             # get new tick events
-            for instrument in self._instruments:
-                instrument.on_loop(engine=self)
+            self._instruments.on_loop(self)
 
             if self._event_queue.empty():
                 time.sleep(self._idle_timeout)

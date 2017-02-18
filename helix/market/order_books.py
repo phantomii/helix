@@ -64,12 +64,6 @@ class OrderBook(object):
                 raise NoQuotas()
             return default
 
-    def _recalculate_positions(self):
-        ask = self.get_ask()
-        bid = self.get_bid()
-        if ask <= bid:
-            pass
-
     def add(self, positions):
         submitted_positions = []
         filled_positions = []

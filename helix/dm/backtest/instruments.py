@@ -30,6 +30,7 @@ class EURUSD(instruments.EURUSD):
         self._stream_reader = csvs.TickStreamReader(file_path=file_path)
         self._tick_generator = self._stream_reader.stream()
         self._last_time_stamp = 0
+        self._tick_info = next(self._tick_generator)
         self._default_volume = default_volume
         self._bid_order_positions = []
         self._ask_order_positions = []
@@ -38,22 +39,26 @@ class EURUSD(instruments.EURUSD):
     def get_instrument_timestamp(self):
         return self._last_time_stamp
 
+    def get_next_tick_info(self):
+        return self._tick_info
+
     def _load_next_tick(self):
-        tick_info = next(self._tick_generator)
-        self._last_time_stamp = tick_info.timestamp
+        self._last_time_stamp = self._tick_info.timestamp
 
         self._order_book.remove(self._bid_order_positions)
         self._order_book.remove(self._ask_order_positions)
 
         self._bid_order_positions = [
-            orders.BuyOrderPosition(price=tick_info.bid)
+            orders.BuyOrderPosition(price=self._tick_info.bid)
             for i in xrange(self._default_volume)]
         self._ask_order_positions = [
-            orders.SellOrderPosition(price=tick_info.ask)
+            orders.SellOrderPosition(price=self._tick_info.ask)
             for i in xrange(self._default_volume)]
 
         self._order_book.add(positions=self._bid_order_positions)
         self._order_book.add(positions=self._ask_order_positions)
+
+        self._tick_info = next(self._tick_generator)
 
         return self.get_last_tick()
 

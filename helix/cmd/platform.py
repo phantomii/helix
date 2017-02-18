@@ -39,7 +39,10 @@ def main():
     eurusd = instruments.EURUSD(
         file_path="data/EURUSD_UTC_Ticks_Bid_2013.01.01_2017.01.01.csv")
 
-    engine = engines.EventEngine(instruments=[eurusd])
+    instruments_list = engines.GroupOfHistoricalInstruments(
+        instruments=[eurusd])
+
+    engine = engines.EventEngine(instruments=instruments_list)
 
     account = accounts.Account(engine, 1000, leverage=100)
     helix_v1.HelixStrategy(account=account)
