@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright 2016 Eugene Frolov <eugene@frolov.net.ru>
+# Copyright 2017 Eugene Frolov <eugene@frolov.net.ru>
 #
 # All Rights Reserved.
 #
@@ -17,31 +17,14 @@
 #    under the License.
 
 
-from oslo_config import cfg
-from restalchemy.storage.sql import engines
+from helix.events import base
 
 
-helix_db_opts = [
-    cfg.StrOpt('connection', default='mysql://root:root@localhost/test')
-]
+class OnTickEvent(base.Event):
 
+    def __init__(self, tick):
+        super(OnTickEvent, self).__init__()
+        self._tick = tick
 
-CONF = cfg.CONF
-CONF.register_cli_opts(helix_db_opts, "database")
-
-_engine = None
-
-
-def configure_engine():
-    engines.engine_factory.configure_factory(CONF.database.connection)
-
-
-def get_engine():
-    global _engine
-    if _engine is None:
-        _engine = engines.engine_factory.get_engine()
-    return _engine
-
-
-def get_session():
-    return get_engine().get_session()
+    def get_tick(self):
+        return self._tick

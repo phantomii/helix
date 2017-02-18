@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright 2015 Eugene Frolov <eugene@frolov.net.ru>
+# Copyright 2015-2017 Eugene Frolov <eugene@frolov.net.ru>
 #
 # All Rights Reserved.
 #
@@ -22,14 +22,33 @@ import logging
 import six
 
 
+from helix.dm import events
+from helix import engines
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Strategy(object):
 
-    def __init__(self):
+    def __init__(self, account):
+        super(Strategy, self).__init__()
         self._log = logging.getLogger(__name__)
+        self._account = account
+        self._engine = account.get_engine()
+        self._engine.subscribe(engines.OnStartEngine, self._on_start_handler)
+        self._engine.subscribe(engines.OnStopEngine, self._on_stop_handler)
+        self._engine.subscribe(events.OnTickEvent, self._on_tick_handler)
+
+    def _on_start_handler(self, engine, event):
+        self.on_start()
+
+    def _on_stop_handler(self, engine, event):
+        self.on_stop()
+
+    def _on_tick_handler(self, engine, event):
+        self.on_tick(tick=event.get_tick())
 
     @abc.abstractmethod
-    def on_start(self, engine):
+    def on_start(self):
         pass
 
     @abc.abstractmethod

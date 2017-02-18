@@ -1,11 +1,11 @@
 version: 1
 formatters:
   brief:
-    format: '%(levelname)-7s %(asctime)15s %(name)s %(message)s'
-    datefmt: '%y-%m-%d,%H:%M:%S'
+    format: '%(levelname)-7s %(asctime)15s.%(msecs)03d %(name)s %(message)s'
+    datefmt: '%Y-%m-%d,%H:%M:%S'
   precise:
-    format: '%(levelname)-7s %(asctime)15s %(name)s:%(lineno)d %(message)s'
-    datefmt: '%y-%m-%d,%H:%M:%S'
+    format: '%(levelname)-7s %(asctime)15s.%(msecs)03d %(name)s:%(lineno)d %(message)s'
+    datefmt: '%Y-%m-%d,%H:%M:%S'
 # this one should only be used by handlers that support topology_id attribute
 # and since it may be used by multiple modules, actual_module attribute
 # should also be added (module will give a short name, pathname is too long)
