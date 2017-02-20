@@ -37,3 +37,14 @@ class OnOrderPositionSubmitted(_BaseOnOrderPosition):
 
 class OnOrderPositionFilled(_BaseOnOrderPosition):
     pass
+
+
+class OnTradeResult(base.Event):
+
+    def __init__(self, trade_result):
+        super(OnTradeResult, self).__init__()
+        self._trade_result = trade_result
+
+    @property
+    def trade_result(self):
+        return self._trade_result

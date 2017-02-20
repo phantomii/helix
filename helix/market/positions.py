@@ -16,17 +16,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import abc
 
-class PositionResult(object):
+import six
 
-    def __init__(self, buy_order_position, sell_order_position):
-        super(PositionResult, self).__init__()
-        self._buy_order_position = buy_order_position
-        self._sell_order_position = sell_order_position
+from helix.market import events
+
+
+@six.add_metaclass(abc.ABCMeta)
+class AbstractTradeResult(object):
+
+    def __init__(self, open_price, close_price, instrument):
+        super(AbstractTradeResult, self).__init__()
+        self._open_price = open_price
+        self._close_price = close_price
+        self._instrument = instrument
 
     @property
     def instrument(self):
-        return self._buy_order_position.order.instrument
+        return self._instrument
 
     @property
     def open_price(self):
@@ -36,21 +44,42 @@ class PositionResult(object):
     def close_price(self):
         return self._close_price
 
+    @abc.abstractmethod
+    def get_profit_loss_in_pips(self):
+        raise NotImplementedError()
+
+    def __str__(self):
+        return "%s: op: %.5f, cp: %.5f" % (type(self).__name__,
+                                           self.open_price,
+                                           self.close_price)
+
+
+class SellTradeResult(AbstractTradeResult):
+
+    def get_profit_loss_in_pips(self):
+        raise NotImplementedError()
+
+
+class BuyTradeResult(AbstractTradeResult):
+
     def get_profit_loss_in_pips(self):
         raise NotImplementedError()
 
 
 class Position(object):
 
-    def __init__(self, instrument):
+    def __init__(self, event_bus, instrument):
         super(Position, self).__init__()
+        self._event_bus = event_bus
         self._instrument = instrument
-        self._sell_positions = []
-        self._buy_positions = []
+        self._open_price = 0
+        self._amount = 0
         self._current_price = 0
 
     @property
     def open_price(self):
+        if self.amount == 0:
+            return 0
         return self._open_price
 
     @property
@@ -59,13 +88,50 @@ class Position(object):
 
     @property
     def amount(self):
-        return len(self._buy_positions) - len(self._sell_positions)
+        return self._amount
 
-    def add_position(self, order_position):
-        if order_position.amount == 1:
-            self._buy_positions.append(order_position)
+    def _calculate_new_current_price(self, price):
+        return ((self.open_price * self.amount) + (price)) / (
+            self._amount + 1)
+
+    def _process_sell_order_position(self, order_position):
+        if self.amount < 0:
+            new_price = self._calculate_new_current_price(order_position.price)
+            self._open_price = new_price
+            self._amount -= 1
+        elif self.amount > 0:
+            self._event_bus.fire(events.OnTradeResult(
+                BuyTradeResult(open_price=self._open_price,
+                               close_price=order_position.price,
+                               instrument=self._instrument)))
+            self._amount += 1
+        else:
+            ValueError("Invalid position amount. Amount is %d. Should not be "
+                       "0.", order_position.amount)
+
+    def _process_buy_order_position(self, order_position):
+        if self.amount > 0:
+            new_price = self._calculate_new_current_price(order_position.price)
+            self._open_price = new_price
+            self._amount += 1
+        elif self.amount < 0:
+            self._event_bus.fire(events.OnTradeResult(
+                SellTradeResult(open_price=self._open_price,
+                                close_price=order_position.price,
+                                instrument=self._instrument)))
+            self._amount -= 1
+        else:
+            ValueError("Invalid position amount. Amount is %d. Should not be "
+                       "0.", order_position.amount)
+
+    def process_order_position(self, order_position):
+        if self.amount == 0:
+            self._open_price = order_position.price
+            self._amount = order_position.amount
+        elif order_position.amount == 1:
+            self._process_buy_order_position(order_position)
         elif order_position.amount == -1:
-            self._sell_positions.append(order_position)
+            self._process_sell_order_position(order_position)
         else:
             raise ValueError("Invalid order position amount. Amount is %d",
                              order_position.amount)
@@ -76,13 +142,11 @@ class PositionManager(object):
     def __init__(self, event_bus, instruments):
         super(PositionManager, self).__init__()
         self._event_bus = event_bus
-        self._positions = {i.name: Position(i) for i in instruments}
+        self._positions = {i.name: Position(event_bus, i) for i in instruments}
 
     def on_tick(self, tick):
         pass
 
-    def add_filled_positions(self, order_positions):
-        for order_position in order_positions:
-            instrument_name = order_position.order.instrument.name
-            self._positions[instrument_name].add_position(
-                order_position=order_position)
+    def process_filled_order_position(self, order_position):
+        instrument = order_position.order.instrument
+        self._positions[instrument.name].process_order_position(order_position)

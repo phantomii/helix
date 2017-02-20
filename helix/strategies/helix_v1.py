@@ -35,10 +35,14 @@ class HelixStrategy(base.Strategy):
                                         instrument=instrument,
                                         price=1.32,
                                         amount=1)
+        self.buy2 = orders.BuyLimitOrder(account=self._account,
+                                         instrument=instrument,
+                                         price=1.31983,
+                                         amount=1)
         self.sell = orders.SellLimitOrder(account=self._account,
                                           instrument=instrument,
                                           price=1.32114,
-                                          amount=1)
+                                          amount=2)
 
     def on_stop(self):
         LOG.debug("Helix strategy stopped")
@@ -47,5 +51,7 @@ class HelixStrategy(base.Strategy):
         LOG.debug("Tick received %s", tick)
         LOG.info("BuyLimitOrder status is %s, price is %.5f",
                  self.buy.get_status(), self.buy.price)
+        LOG.info("BuyLimitOrder2 status is %s, price is %.5f",
+                 self.buy2.get_status(), self.buy2.price)
         LOG.info("SellLimitOrder status is %s, price is %.5f",
                  self.sell.get_status(), self.sell.price)

@@ -111,6 +111,10 @@ class AbstractOrder(object):
                 self._submited_order_positions.append(order_position)
 
     @property
+    def account(self):
+        return self._account
+
+    @property
     def instrument(self):
         return self._instrument
 
