@@ -17,10 +17,14 @@
 #    under the License.
 
 import abc
+import logging
 
 import six
 
 from helix.market import events
+
+
+LOG = logging.getLogger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -45,25 +49,31 @@ class AbstractTradeResult(object):
         return self._close_price
 
     @abc.abstractmethod
-    def get_profit_loss_in_pips(self):
+    def get_profit_loss_in_points(self):
         raise NotImplementedError()
 
+    def get_profit_loss(self):
+        return self._instrument.calculate_profit_loss(
+            self.get_profit_loss_in_points())
+
     def __str__(self):
-        return "%s: op: %.5f, cp: %.5f" % (type(self).__name__,
-                                           self.open_price,
-                                           self.close_price)
+        return "%s: op: %.5f, cp: %.5f, profit: %.2f" % (
+            type(self).__name__,
+            self.open_price,
+            self.close_price,
+            self.get_profit_loss())
 
 
 class SellTradeResult(AbstractTradeResult):
 
-    def get_profit_loss_in_pips(self):
-        raise NotImplementedError()
+    def get_profit_loss_in_points(self):
+        return self._open_price - self._close_price
 
 
 class BuyTradeResult(AbstractTradeResult):
 
-    def get_profit_loss_in_pips(self):
-        raise NotImplementedError()
+    def get_profit_loss_in_points(self):
+        return self._close_price - self._open_price
 
 
 class Position(object):
@@ -104,7 +114,7 @@ class Position(object):
                 BuyTradeResult(open_price=self._open_price,
                                close_price=order_position.price,
                                instrument=self._instrument)))
-            self._amount += 1
+            self._amount -= 1
         else:
             ValueError("Invalid position amount. Amount is %d. Should not be "
                        "0.", order_position.amount)
@@ -119,7 +129,7 @@ class Position(object):
                 SellTradeResult(open_price=self._open_price,
                                 close_price=order_position.price,
                                 instrument=self._instrument)))
-            self._amount -= 1
+            self._amount += 1
         else:
             ValueError("Invalid position amount. Amount is %d. Should not be "
                        "0.", order_position.amount)
@@ -136,6 +146,17 @@ class Position(object):
             raise ValueError("Invalid order position amount. Amount is %d",
                              order_position.amount)
 
+    def on_tick(self, tick):
+        if self.amount > 0:
+            self._current_price = tick.bid
+        else:
+            self._current_price = tick.ask
+
+    def get_profit_loss(self):
+        return self._instrument.calculate_profit_loss(
+            points=self._current_price - self._open_price,
+            amount=self.amount)
+
 
 class PositionManager(object):
 
@@ -145,8 +166,15 @@ class PositionManager(object):
         self._positions = {i.name: Position(event_bus, i) for i in instruments}
 
     def on_tick(self, tick):
-        pass
+        instrument = tick.instrument
+        self._positions[instrument.name].on_tick(tick)
 
     def process_filled_order_position(self, order_position):
         instrument = order_position.order.instrument
         self._positions[instrument.name].process_order_position(order_position)
+
+    def get_profit_loss(self):
+        profit = 0
+        for position in self._positions.values():
+            profit += position.get_profit_loss()
+        return profit

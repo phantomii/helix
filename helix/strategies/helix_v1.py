@@ -55,3 +55,4 @@ class HelixStrategy(base.Strategy):
                  self.buy2.get_status(), self.buy2.price)
         LOG.info("SellLimitOrder status is %s, price is %.5f",
                  self.sell.get_status(), self.sell.price)
+        LOG.info("%s", self._account)

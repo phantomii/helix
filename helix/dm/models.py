@@ -59,6 +59,10 @@ class Instrument(object):
     def on_loop(self, engine):
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def calculate_profit_loss(self, points, amount=1):
+        raise NotImplementedError()
+
     def __str__(self):
         return "Instrument: %s" % self.name
 

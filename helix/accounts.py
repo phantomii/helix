@@ -46,6 +46,18 @@ class Account(object):
     def get_engine(self):
         return self._engine
 
+    def get_deposit(self):
+        return self._deposit
+
+    def get_profit_loss(self):
+        return self._positions.get_profit_loss()
+
+    def get_equity(self):
+        return self._deposit + self._positions.get_profit_loss()
+
+    def get_margin(self):
+        return 0
+
     def _on_filled_position_handler(self, event):
         order_position = event.order_position
         order = order_position.order
@@ -54,11 +66,19 @@ class Account(object):
 
     def _on_tick_handler(self, event):
         # TODO(efrolov): Should check margin level here
-        pass
+        tick = event.get_tick()
+        self._positions.on_tick(tick)
 
     def _on_trade_result_handler(self, event):
+        trade = event.trade_result
+        self._deposit += trade.get_profit_loss()
         LOG.info("Trade: %s", event.trade_result)
 
     def submit_order_positions(self, instrument, positions):
         # TODO(efrolov): Should check margin level here
         instrument.submit_order_positions(positions=positions)
+
+    def __str__(self):
+        return ("Account: Deposit: %.2f, Profit: %.2f, Equity: %.2f, "
+                "Margin: %.2f" % (self.get_deposit(), self.get_profit_loss(),
+                                  self.get_equity(), self.get_margin()))

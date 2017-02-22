@@ -24,3 +24,7 @@ class EURUSD(models.Instrument):
 
     def __init__(self, event_bus):
         super(EURUSD, self).__init__(name="EUR/USD", event_bus=event_bus)
+
+    def calculate_profit_loss(self, points, amount=1):
+        # One lot is 1000$
+        return points * 1000 * amount
