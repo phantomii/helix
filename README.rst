@@ -1,4 +1,4 @@
 Helix
 =====
 
-Trading platform.
+Trading platform and backtesting tool.
